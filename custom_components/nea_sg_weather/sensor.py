@@ -20,6 +20,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import NeaWeatherDataUpdateCoordinator
@@ -67,10 +68,47 @@ async def async_setup_entry(
 
     # add rainfall sensor entities
     if config_entry.data[CONF_SENSORS][CONF_RAIN]:
+        _known_rain_ids: set[str] = {s["id"] for s in coordinator.data.rain.station_list}
         entities_list += [
-            NeaRainSensor(coordinator, config_entry.data, rain_sensor_id["id"], entry_id)
-            for rain_sensor_id in coordinator.data.rain.station_list
+            NeaRainSensor(coordinator, config_entry.data, sid, entry_id)
+            for sid in _known_rain_ids
         ]
+
+        prefix = config_entry.data[CONF_SENSORS][CONF_PREFIX]
+
+        def _make_rain_listener(
+            known: set[str],
+            add_cb: AddEntitiesCallback,
+        ):
+            def _listener():
+                current = {s["id"] for s in coordinator.data.rain.station_list}
+                removed = known - current
+                added = current - known
+
+                if removed:
+                    ent_reg = er.async_get(hass)
+                    for sid in removed:
+                        unique_id = f"{prefix} Rainfall {sid}"
+                        entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
+                        if entity_id:
+                            ent_reg.async_remove(entity_id)
+                            _LOGGER.debug("Removed orphaned rain sensor: %s", sid)
+                    known.difference_update(removed)
+
+                if added:
+                    new_entities = [
+                        NeaRainSensor(coordinator, config_entry.data, sid, entry_id)
+                        for sid in added
+                    ]
+                    add_cb(new_entities)
+                    _LOGGER.debug("Added new rain sensors: %s", added)
+                    known.update(added)
+
+            return _listener
+
+        coordinator.async_add_listener(
+            _make_rain_listener(_known_rain_ids, async_add_entities)
+        )
 
     # add uv sensor entities
     entities_list += [
@@ -323,6 +361,14 @@ class NeaRainSensor(CoordinatorEntity, SensorEntity):
     def unique_id(self):
         """Return the unique ID."""
         return self._prefix + " Rainfall " + self._rain_sensor_id
+
+    @property
+    def available(self) -> bool:
+        """Return False if this station is no longer in the API data."""
+        return (
+            super().available
+            and self._rain_sensor_id in self.coordinator.data.rain.data
+        )
 
     @property
     def name(self):
