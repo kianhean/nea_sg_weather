@@ -117,8 +117,10 @@ async def async_setup_entry(
 
             return _listener
 
-        coordinator.async_add_listener(
-            _make_rain_listener(_known_rain_ids, async_add_entities)
+        config_entry.async_on_unload(
+            coordinator.async_add_listener(
+                _make_rain_listener(_known_rain_ids, async_add_entities)
+            )
         )
 
     # add uv sensor entities
