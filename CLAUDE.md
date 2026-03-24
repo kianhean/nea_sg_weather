@@ -66,6 +66,17 @@ custom_components/nea_sg_weather/
 └── config_flow.py    # Config-entry UI flow
 ```
 
+## Dynamic Rain Sensor Management
+
+Rain station entities are built from the live API response (`Rain.station_list`) rather than a static list. This means the set of stations can change between coordinator updates.
+
+`sensor.py:async_setup_entry` handles this with a coordinator listener registered after initial entity creation:
+
+- **Removed stations** — looked up in the entity registry by `unique_id` and deleted via `entity_registry.async_remove()` so they do not remain as orphans in HA.
+- **New stations** — instantiated as `NeaRainSensor` and registered via `async_add_entities()`.
+
+`NeaRainSensor.available` returns `False` when the station ID is absent from `coordinator.data.rain.data`, preventing `KeyError` crashes in the brief window between a station disappearing from the API and its entity being removed.
+
 ## CI
 
 GitHub Actions (`.github/workflows/tests.yml`) runs the suite on Python 3.11
