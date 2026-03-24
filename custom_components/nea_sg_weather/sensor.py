@@ -69,12 +69,23 @@ async def async_setup_entry(
     # add rainfall sensor entities
     if config_entry.data[CONF_SENSORS][CONF_RAIN]:
         _known_rain_ids: set[str] = {s["id"] for s in coordinator.data.rain.station_list}
+        prefix = config_entry.data[CONF_SENSORS][CONF_PREFIX]
+
+        # Remove orphaned rain sensor entities from previous installs whose
+        # station IDs are no longer present in the current API response.
+        ent_reg = er.async_get(hass)
+        _rainfall_prefix = f"{prefix} Rainfall "
+        for entry in er.async_entries_for_config_entry(ent_reg, entry_id):
+            if entry.unique_id.startswith(_rainfall_prefix):
+                sid = entry.unique_id[len(_rainfall_prefix):]
+                if sid not in _known_rain_ids:
+                    ent_reg.async_remove(entry.entity_id)
+                    _LOGGER.debug("Removed orphaned rain sensor on startup: %s", sid)
+
         entities_list += [
             NeaRainSensor(coordinator, config_entry.data, sid, entry_id)
             for sid in _known_rain_ids
         ]
-
-        prefix = config_entry.data[CONF_SENSORS][CONF_PREFIX]
 
         def _make_rain_listener(
             known: set[str],

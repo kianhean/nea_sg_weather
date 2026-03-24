@@ -70,7 +70,11 @@ custom_components/nea_sg_weather/
 
 Rain station entities are built from the live API response (`Rain.station_list`) rather than a static list. This means the set of stations can change between coordinator updates.
 
-`sensor.py:async_setup_entry` handles this with a coordinator listener registered after initial entity creation:
+`sensor.py:async_setup_entry` handles this in two stages:
+
+**Startup cleanup** — before creating any entities, all rain sensor entries already in the entity registry for this config entry are scanned. Any whose station ID is not in the current API `station_list` are removed immediately. This catches orphans left behind by previous installs or a static station list.
+
+**Runtime listener** — a coordinator listener registered after initial entity creation diffs `_known_rain_ids` on every update:
 
 - **Removed stations** — looked up in the entity registry by `unique_id` and deleted via `entity_registry.async_remove()` so they do not remain as orphans in HA.
 - **New stations** — instantiated as `NeaRainSensor` and registered via `async_add_entities()`.
