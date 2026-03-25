@@ -3,6 +3,16 @@ import re
 import pytest
 from aioresponses import aioresponses as AioResponses
 
+
+# pytest-homeassistant-custom-component blocks custom integrations by default.
+# This autouse fixture opts every test in ha_tests/ into the allow-list so HA
+# can find and load the integration from the local custom_components/ directory.
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):
+    """Allow HA to load integrations from the local custom_components/ directory."""
+    yield
+
+
 # ---------------------------------------------------------------------------
 # Canned API responses — realistic enough that nea.py process_data() runs
 # (each payload stringifies to well over 120 characters).
