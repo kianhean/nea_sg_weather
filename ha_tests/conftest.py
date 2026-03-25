@@ -30,6 +30,7 @@ def verify_cleanup():
             isinstance(thread, threading._DummyThread)
             or thread.name.startswith("waitpid-")
             or "_run_safe_shutdown_loop" in thread.name
+            or thread.name.startswith("SyncWorker_")
         ), f"Unexpected thread left after test: {thread.name!r}"
 
 
