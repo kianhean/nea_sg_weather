@@ -22,7 +22,15 @@ class _CoordinatorEntity:
 
 class _DataUpdateCoordinator:
     def __init__(self, *args, **kwargs):
-        pass
+        self.last_update_success = True
+        self.data = None
+
+    async def async_config_entry_first_refresh(self):
+        """Minimal stub: delegate to the subclass update method."""
+        self.data = await self._async_update_data()
+
+    def async_add_listener(self, listener, context=None):
+        """Stub — no listeners tracked in tests."""
 
 
 class _SensorEntity:
