@@ -3,7 +3,7 @@ name: E2E Tests
 on:
   # Run on a schedule so we catch upstream API changes early
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours
+    - cron: "0 0 * * 1"   # every Monday at midnight UTC
   # Allow manual runs from the Actions tab
   workflow_dispatch:
   # Also run on pushes to main so a fresh PR can catch regressions
