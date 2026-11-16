@@ -68,6 +68,12 @@
       },
       "animated_rain_map": {
         "name": "Animated rain map"
+      },
+      "rain_radar": {
+        "name": "Rain radar {range}"
+      },
+      "rain_radar_animation": {
+        "name": "Rain radar animation {range}"
       }
     },
     "sensor": {

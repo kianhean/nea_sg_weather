@@ -19,6 +19,9 @@ class _DataUpdateCoordinator:
     def __init__(self, *args, **kwargs):
         pass
 
+    def __class_getitem__(cls, _item):
+        return cls
+
 
 class _SensorEntity:
     pass

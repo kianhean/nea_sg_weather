@@ -1,5 +1,12 @@
 Unreleased
 
+- Added rain radar cameras with the map built in: data.gov.sg's radar image drawn
+  on NEA's own base map, as on NEA's rain areas page, for the 70 km and 240 km
+  ranges. Each range has a still camera (`camera.<prefix>_rain_radar_70km`) and an
+  animated one (`camera.<prefix>_rain_radar_animation_70km`, the last hour as a
+  looping GIF with the time on each frame). Created when the rain option is on;
+  the existing rain map cameras are unchanged. Ported from the `singapore`
+  integration
 - Added a **Reconfigure** option to change which entities an instance sets
   up (weather entity, areas, region sensors, rain, scan interval, timeout)
   without removing and re-adding it. The name and prefix are kept, so entity

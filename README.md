@@ -25,6 +25,7 @@ Follow the integration config flow (**Settings → Devices & services → Add in
 - `area` (town) sensors: current weather conditions for specific areas/towns (or all 47 areas if `"All"` is explicitly selected) in Singapore.
 - `region` sensors: 24 hour weather condition forecast for North/South/East/West/Central regions of Singapore
 - `rain` camera: 2 camera entities for static and animated rain map overlays updated every 5 minutes from NEA
+- `rain` radar cameras: NEA's rain radar drawn on NEA's own map, as on the [rain areas page](https://www.nea.gov.sg/weather/rain-areas), for the 70 km (Singapore) and 240 km (region) ranges. Each range has a still camera (`camera.<prefix>_rain_radar_70km`, a JPEG of the latest image) and an animated one (`camera.<prefix>_rain_radar_animation_70km`, a looping GIF of the last hour with the time on each frame). Updated every 5 minutes from data.gov.sg; the animation comes from the same request as the still image, so it costs no extra API calls
 - `rain` sensors: one rainfall sensor per active NEA station, fetched live from the API — stations are added and removed automatically as the API changes
 - `pm25` sensors: 5 pm2.5 sensors for North/South/East/West/Central regions of Singapore
 - `psi` sensors: 5 sensors with the 24-hour PSI for North/South/East/West/Central regions of Singapore; the 24-hour PM2.5 and the per-pollutant sub-indices are exposed as attributes
@@ -37,7 +38,7 @@ To change which entities an instance sets up (weather entity, areas, region sens
 
 ### Devices and entity names
 
-Each configured instance creates a device named after the instance (e.g. "Singapore Weather") holding the weather entity, the UV, area and rainfall sensors and the rain map cameras. When region sensors are enabled, each region gets its own device ("Central Singapore", "Northern Singapore", …) under the main device, holding that region's forecast, PM2.5 and PSI sensors.
+Each configured instance creates a device named after the instance (e.g. "Singapore Weather") holding the weather entity, the UV, area and rainfall sensors and the rain map and rain radar cameras. When region sensors are enabled, each region gets its own device ("Central Singapore", "Northern Singapore", …) under the main device, holding that region's forecast, PM2.5 and PSI sensors.
 
 Entity names follow Home Assistant's convention of device name plus entity name, e.g. "Singapore Weather UV index" or "Central Singapore PSI (24-hour)". Entity IDs are built from the configured prefix and do not depend on these names.
 

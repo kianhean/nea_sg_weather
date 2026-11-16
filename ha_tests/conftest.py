@@ -226,6 +226,26 @@ PSI = {
     },
 }
 
+# Rain radar (weather-radar-images/{range}?date=…): the day's images, newest first.
+RADAR_FRAME_URL = "https://s3.example/radar-{minute:02d}.png"
+RADAR = {
+    "code": 0,
+    "data": {
+        "projection": {"center": {"longitude": 103.972583, "latitude": 1.34911}},
+        "boundaryBox": {
+            "upperLeft": {"longitude": 103.342685, "latitude": 1.97854},
+            "lowerRight": {"longitude": 104.602315, "latitude": 0.719515},
+        },
+        "records": [
+            {
+                "timestamp": f"2024-01-01T12:{minute:02d}:00+08:00",
+                "image": {"url": RADAR_FRAME_URL.format(minute=minute)},
+            }
+            for minute in (10, 5, 0)
+        ],
+    },
+}
+
 _BASE = "https://api-open.data.gov.sg/v2/real-time/api"
 
 _ENDPOINTS = [
@@ -240,6 +260,7 @@ _ENDPOINTS = [
     ("uv",                     UV_INDEX),
     ("pm25",                   PM25),
     ("psi",                    PSI),
+    ("weather-radar-images",   RADAR),
 ]
 
 

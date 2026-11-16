@@ -71,7 +71,9 @@ custom_components/nea_sg_weather/
 ├── nea.py            # Async API wrappers (Forecast2hr, Wind, Rain, …)
 ├── weather.py        # WeatherEntity
 ├── sensor.py         # Sensor entities (area, region, rain, UV, PM2.5, PSI)
-├── camera.py         # Rain-map camera entities
+├── camera.py         # Rain-map cameras (weather.gov.sg) + rain radar cameras (still/animated)
+├── radar.py          # RadarCoordinator: data.gov.sg radar images + last-hour frames
+├── radar_image.py    # Pure Pillow: radar drawn on NEA base maps (JPEG) and GIF loops
 └── config_flow.py    # Config-entry UI flow
 ```
 
@@ -167,12 +169,50 @@ In a sensors-only configuration the set is built per option: area sensors →
 created unconditionally by `sensor.async_setup_entry`, so UV is polled whenever
 `get_platforms()` includes the sensor platform; rain sensors live in the same
 platform, so rainfall is polled when the rain option is on *and* the sensor
-platform loads (the rain cameras read no coordinator data).
+platform loads (the rain cameras read no data from this coordinator; the radar
+cameras have their own, see below).
 
 When adding an entity that reads a new data object, add that object to every
 branch whose configuration creates the entity, and extend
 `tests/test_init.py::TestAsyncUpdatePolledObjects`. Entities that read an
 unpolled object silently show the object's constructor defaults (e.g. UV = 0).
+
+## Rain Radar Cameras
+
+Ported from the `singapore` integration (kianhean/singapore-homeassistant:
+`radar_coordinator.py`, `radar_image.py`, `camera.py`); keep the two in step.
+The camera platform (rain option on) adds, next to the existing weather.gov.sg
+`rain_map` / `animated_rain_map` cameras, which are unchanged:
+
+- `NeaRainRadarCamera` (`rain_radar`, `camera.<prefix>_rain_radar_<range>`,
+  unique ID `<prefix> Rain Radar <range>`) and `NeaRainRadarAnimationCamera`
+  (`rain_radar_animation`, `camera.<prefix>_rain_radar_animation_<range>`) for
+  each range in `radar.RADAR_RANGES` (`70km`, `240km`), on the main device.
+- `radar.RadarCoordinator` is created in `camera.async_setup_entry` with the
+  config entry (so it shuts down on unload); its first refresh is a background
+  task, so a data.gov.sg outage never blocks setup. It polls every 5 minutes,
+  whatever the scan interval: GET
+  `api-open.data.gov.sg/v2/real-time/api/weather-radar-images/{range}?date=YYYY-MM-DD`
+  (Singapore date) returns the day's images newest first, each with a presigned
+  S3 URL (expires ~20 min). `records[0]` is the latest image; the records within
+  `ANIMATION_WINDOW` (1 h) are `RadarImage.frames`, so the animation costs no
+  extra API call. Until `_EARLIER_DAY_UNTIL` after midnight the previous day is
+  fetched too. Ranges are fetched sequentially; a range whose fetch fails (HTTP
+  error, 429, network) keeps its last image.
+- `radar_image.py` (Pillow only, no HA imports, blocking: run it in the executor)
+  draws the transparent radar PNG on NEA's base maps (`BASEMAPS`, fetched once at
+  runtime from nea.gov.sg, retried after `BASEMAP_RETRY_SECONDS`): 70 km is the
+  crop `(83, 193, 300, 313)` of the 480 × 480 image on `base-853.png`, 240 km the
+  whole image on `240km-v2.jpg`, both scaled to the map's width, top-left aligned.
+  The still is a JPEG (bare PNG overlay while the map is unavailable); the
+  animation is a GIF with one shared palette and an HH:MM label per frame.
+- The still camera caches by capture timestamp (the URL is re-signed every
+  poll); the animation keeps each frame's overlay and rebuilds only when the set
+  of frames changes.
+
+Tests: `tests/test_radar.py` (real Pillow: `requirements-test.txt` installs it and
+`tests/conftest.py` does not stub `PIL`), `ha_tests/test_radar.py` (canned radar
+payload in `ha_tests/conftest.py`), and live checks in `e2e_tests/`.
 
 ## API Failure Handling
 
