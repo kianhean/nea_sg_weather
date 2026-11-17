@@ -230,3 +230,52 @@ async def test_psi_returns_regional_data():
         assert set(values) == expected_regions, f"Missing regions in {pollutant!r}"
         for region, value in values.items():
             assert value >= 0, f"{pollutant} for {region!r} is negative"
+
+
+# ---------------------------------------------------------------------------
+# Rain radar (data.gov.sg weather-radar-images) and NEA's base maps
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("radar_range", ["70km", "240km"])
+async def test_radar_returns_latest_image_and_last_hour_of_frames(radar_range):
+    from custom_components.nea_sg_weather.radar import (
+        ANIMATION_WINDOW,
+        RADAR_URL,
+        _now,
+        parse_radar,
+    )
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                RADAR_URL.format(range=radar_range),
+                params={"date": _now().date().isoformat()},
+            ) as response:
+                if response.status != 200:
+                    pytest.skip(f"Radar API returned HTTP {response.status}")
+                payload = await response.json(content_type=None)
+    except aiohttp.ClientConnectorError as exc:
+        pytest.skip(f"Network unavailable: {exc}")
+
+    if not payload.get("data", {}).get("records"):
+        pytest.skip("No radar images yet today (just after midnight)")
+    image = parse_radar(payload, radar_range)
+    assert image.image_url.startswith("https://")
+    assert image.timestamp is not None
+    assert image.frames, "frames should include at least the latest image"
+    assert image.frames[-1].timestamp == image.timestamp
+    assert image.frames[-1].timestamp - image.frames[0].timestamp < ANIMATION_WINDOW
+
+
+@pytest.mark.parametrize("radar_range", ["70km", "240km"])
+async def test_nea_base_map_is_served(radar_range):
+    # The base maps are nea.gov.sg website assets, not open data: catch a move.
+    from custom_components.nea_sg_weather.radar_image import BASEMAPS
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(BASEMAPS[radar_range].url) as response:
+                assert response.status == 200
+                assert response.content_type.startswith("image/")
+    except aiohttp.ClientConnectorError as exc:
+        pytest.skip(f"Network unavailable: {exc}")

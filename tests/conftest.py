@@ -21,8 +21,12 @@ class _CoordinatorEntity:
 
 
 class _DataUpdateCoordinator:
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, hass=None, *args, **kwargs):
+        self.hass = hass
+        self.data = None
+
+    def __class_getitem__(cls, _item):
+        return cls
 
 
 class _SensorEntity:
@@ -180,8 +184,5 @@ sys.modules.update({
     "homeassistant.helpers.config_validation": MagicMock(),
     "aiohttp": _make_aiohttp_stub(),
     "voluptuous": MagicMock(),
-    "PIL": MagicMock(),
-    "PIL.Image": MagicMock(),
-    "PIL.ImageDraw": MagicMock(),
-    "PIL.ImageFont": MagicMock(),
 })
+# Pillow is real (requirements-test.txt): tests/test_radar.py renders images with it.
